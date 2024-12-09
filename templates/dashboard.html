@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Welcome, {{ session['username'] }}!</h1>
+    <ul>
+        <li><a href="/view_data">View Data</a></li>
+        <li><a href="/add_data">Add Data</a></li>
+        <li><a href="/ask_questions">Ask Questions</a></li>
+        <li><a href="/upload_data">Upload Data</a></li> <!-- New upload data link -->
+        <li><a href="/dashboard">Dashboard</a></li>
+    </ul>
+</body>
+</html>

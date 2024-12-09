@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Data</title>
+</head>
+<body>
+    <h1>Data from Database</h1>
+
+    <form method="POST">
+        <!-- Search by Hshd_num -->
+        <label for="hshd_num">Search by Hshd_num:</label>
+        <input type="text" name="hshd_num" id="hshd_num">
+        <button type="submit">Search</button>
+    </form>
+
+    <!-- Button to reset and view all data -->
+    <form action="{{ url_for('view_data') }}" method="get">
+        <button type="submit">View All Data</button>
+    </form>
+
+    <table border="1">
+        <thead>
+            <tr>
+                {% for column in column_names %}
+                    <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+                <tr>
+                    {% for column in row %}
+                        <td>{{ column }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
