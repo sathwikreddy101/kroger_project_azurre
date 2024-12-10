@@ -2,3 +2,4 @@ flask
 pyodbc
 pandas
 pymssql
+plotly

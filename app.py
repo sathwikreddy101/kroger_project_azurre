@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, session
 import pymssql
 import pandas as pd
 import os
+import plotly.express as px
+import plotly.io as pio
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Change to a secure key
@@ -23,11 +25,12 @@ def get_db_connection():
         print(f"Database connection failed: {e}")
         return None
 
+
 # Home route that shows a login form
 @app.route('/')
 def home():
     if 'username' in session:
-        return redirect(url_for('dashboard'))  # Redirect to dashboard if logged in
+        return redirect(url_for('navigation'))  # Redirect to navigation if logged in
     return render_template('login.html')
 
 # Login route to handle form submission
@@ -39,14 +42,20 @@ def login():
     
     # You can add user authentication here if needed
     session['username'] = username  # Store user info in session
-    return redirect(url_for('dashboard'))  # Redirect to dashboard
+    return redirect(url_for('navigation'))  # Redirect to navigation page
 
-# Dashboard route after successful login
-@app.route('/dashboard')
-def dashboard():
+# Logout route to end session
+@app.route('/logout')
+def logout():
+    session.pop('username', None)  # Clear user session
+    return redirect(url_for('home'))  # Redirect to login page
+
+# Navigation route
+@app.route('/navigation')
+def navigation():
     if 'username' not in session:
         return redirect(url_for('home'))  # Redirect to login if not logged in
-    return render_template('dashboard.html')
+    return render_template('navigation.html')
 
 # Route to view data
 @app.route('/view_data', methods=['GET', 'POST'])
@@ -167,6 +176,149 @@ def load_data_to_db(file_path, file_type):
     conn.commit()
     cursor.close()
     conn.close()
+
+# Dashboard route to display the main dashboard page
+@app.route('/dashboard')
+def dashboard():
+    if 'username' not in session:
+        return redirect(url_for('home'))  # Redirect to login if not logged in
+    
+    # Queries for Retail Questions
+    demographics_data = query_demographics()
+    spending_over_time_data = query_spending_over_time()
+    basket_analysis_data = query_basket_analysis()
+    seasonal_trends_data = query_seasonal_trends()
+    brand_preferences_data = query_brand_preferences()
+
+    # Plot graphs using Plotly (or another JS library)
+    spending_graph = create_spending_graph(spending_over_time_data)
+    basket_graph = create_basket_graph(basket_analysis_data)
+    seasonal_graph = create_seasonal_graph(seasonal_trends_data)
+    brand_graph = create_brand_graph(brand_preferences_data)
+
+    # Render the dashboard page with the data and graphs
+    return render_template('dashboard.html', 
+                           demographics_data=demographics_data,
+                           spending_graph=spending_graph,
+                           basket_graph=basket_graph,
+                           seasonal_graph=seasonal_graph,
+                           brand_graph=brand_graph)
+
+def query_demographics():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        HH_SIZE, 
+        CHILDREN,  
+        INCOME_RANGE, 
+        COUNT(*) AS EngagementCount
+    FROM households
+    GROUP BY HH_SIZE, CHILDREN, INCOME_RANGE
+    """
+
+    cursor.execute(query)
+    data = cursor.fetchall()
+    conn.close()
+
+    return pd.DataFrame(data, columns=['HouseholdSize', 'PresenceOfChildren', 'Income', 'EngagementCount'])
+
+def query_spending_over_time():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        YEAR(T.PURCHASE_DATE) AS Year,
+        SUM(T.SPEND) AS TotalSpent
+    FROM transactions T
+    GROUP BY YEAR(T.PURCHASE_DATE)
+    """
+
+    cursor.execute(query)
+    data = cursor.fetchall()
+    conn.close()
+
+    return pd.DataFrame(data, columns=['Year', 'TotalSpent'])
+
+def query_basket_analysis():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        P.COMMODITY, 
+        COUNT(*) AS ProductCombinationCount
+    FROM transactions T
+    JOIN [dbo].[400_products] P ON T.Product_NUM = P.Product_NUM
+    GROUP BY P.COMMODITY
+    """
+
+    cursor.execute(query)
+    data = cursor.fetchall()
+    conn.close()
+
+    return pd.DataFrame(data, columns=['ProductCategory', 'ProductCombinationCount'])
+
+def query_seasonal_trends():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        MONTH(T.PURCHASE_DATE) AS Month, 
+        SUM(T.SPEND) AS TotalSpent
+    FROM transactions T
+    GROUP BY MONTH(T.PURCHASE_DATE)
+    """
+
+    cursor.execute(query)
+    data = cursor.fetchall()
+    conn.close()
+
+    return pd.DataFrame(data, columns=['Month', 'TotalSpent'])
+
+def query_brand_preferences():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+    SELECT 
+        P.Brand_TY, 
+        COUNT(*) AS PurchaseCount
+    FROM transactions T
+    JOIN [dbo].[400_products] P ON T.Product_NUM = P.Product_NUM
+    GROUP BY P.Brand_TY
+    """
+
+    cursor.execute(query)
+    data = cursor.fetchall()
+    conn.close()
+
+    return pd.DataFrame(data, columns=['Brand', 'PurchaseCount'])
+
+# Function to create spending graph
+def create_spending_graph(df):
+    fig = px.line(df, x='Year', y='TotalSpent', title='Spending Over Time')
+    return pio.to_html(fig, full_html=False)
+
+# Function to create basket analysis graph
+def create_basket_graph(df):
+    fig = px.bar(df, x='ProductCategory', y='ProductCombinationCount', title='Basket Analysis (Product Combinations)')
+    return pio.to_html(fig, full_html=False)
+
+# Function to create seasonal trends graph
+def create_seasonal_graph(df):
+    fig = px.line(df, x='Month', y='TotalSpent', title='Seasonal Trends')
+    return pio.to_html(fig, full_html=False)
+
+# Function to create brand preferences graph
+def create_brand_graph(df):
+    fig = px.bar(df, x='Brand', y='PurchaseCount', title='Brand Preferences')
+    return pio.to_html(fig, full_html=False)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)

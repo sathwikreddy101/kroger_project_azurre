@@ -3,16 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard</title>
+    <title>Retail Dashboard</title>
+    <a href="{{ url_for('navigation') }}" class="button">Back to Navigation</a>
 </head>
 <body>
-    <h1>Welcome, {{ session['username'] }}!</h1>
-    <ul>
-        <li><a href="/view_data">View Data</a></li>
-        <li><a href="/add_data">Add Data</a></li>
-        <li><a href="/ask_questions">Ask Questions</a></li>
-        <li><a href="/upload_data">Upload Data</a></li> <!-- New upload data link -->
-        <li><a href="/dashboard">Dashboard</a></li>
-    </ul>
+    <h1>Welcome to the Retail Dashboard, {{ session['username'] }}!</h1>
+    
+    <h2>Demographics and Engagement</h2>
+    <table>
+        <tr>
+            <th>Household Size</th>
+            <th>Presence of Children</th>
+            <th>Location</th>
+            <th>Income</th>
+            <th>Engagement Count</th>
+        </tr>
+        {% for row in demographics_data.itertuples() %}
+        <tr>
+            <td>{{ row.HouseholdSize }}</td>
+            <td>{{ row.PresenceOfChildren }}</td>
+            <td>{{ row.Location }}</td>
+            <td>{{ row.Income }}</td>
+            <td>{{ row.EngagementCount }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Spending Over Time</h2>
+    <div>{{ spending_graph | safe }}</div>
+
+    <h2>Basket Analysis</h2>
+    <div>{{ basket_graph | safe }}</div>
+
+    <h2>Seasonal Trends</h2>
+    <div>{{ seasonal_graph | safe }}</div>
+
+    <h2>Brand Preferences</h2>
+    <div>{{ brand_graph | safe }}</div>
+
+    <br><br>
+    <a href="/logout">Logout</a>
 </body>
 </html>
